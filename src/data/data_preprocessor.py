@@ -128,3 +128,20 @@ class DataPreparation:
         X_train, X_test, y_train, y_test = train_test_split(X_transformed, y, test_size=0.2, random_state=0)
         
         return X_train, X_test, y_train, y_test, merged_data, data_with_features, X_transformed
+
+    def prepare_prophet_data(self):
+        """
+        Prepare data for forecasting with Prophet.
+        """
+        # Call the merge_data method and store its return value
+        merged_data = self.merge_data()
+
+         # Create revenue column here
+        merged_data['revenue'] = merged_data['sell_price'] * merged_data['sales']
+        
+        # Aggregate total sales per day
+        daily_sales = merged_data.groupby('date')['revenue'].sum().reset_index()
+        
+        # Rename columns for Prophet compatibility
+        daily_sales.columns = ['ds', 'y']
+        return daily_sales
