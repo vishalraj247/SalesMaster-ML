@@ -8,3 +8,4 @@ prophet=1.1.4
 ipywidgets=8.0.4
 numpy=1.22
 plotly=5.9.0
+xgboost=1.7.3
