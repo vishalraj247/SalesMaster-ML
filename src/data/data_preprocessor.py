@@ -230,8 +230,6 @@ class DataPreparation:
         ]
         X_single = pd.merge(X_single, relevant_sell_prices, on=['store_id', 'item_id'], how='left')
         print("Shape after sell_prices merge:", X_single.shape)
-#        X_single = pd.merge(X_single, self.sell_prices, on=['store_id', 'item_id'], how='left')
-#        print("Shape after sell_prices merge:", X_single.shape)
         
         # Fill missing values in 'sell_price' with 0
         X_single['sell_price'].fillna(0, inplace=True)
