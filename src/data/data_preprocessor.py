@@ -131,17 +131,43 @@ class DataPreparation:
 
     def prepare_prophet_data(self):
         """
-        Prepare data for forecasting with Prophet.
+        Prepares and aggregates data for Prophet forecasting.
+        This method groups the data by date, calculates total revenue per day,
+        and renames the columns to be compatible with Prophet.
+        
+        Returns:
+            pd.DataFrame: A DataFrame with 'ds' and 'y' columns ready for Prophet forecasting.
         """
-        # Call the merge_data method and store its return value
+        # Call the merge_data method to get the merged dataset
         merged_data = self.merge_data()
 
-         # Create revenue column here
+        # Calculate daily revenue
         merged_data['revenue'] = merged_data['sell_price'] * merged_data['sales']
         
-        # Aggregate total sales per day
+        # Aggregate revenue per day
         daily_sales = merged_data.groupby('date')['revenue'].sum().reset_index()
         
-        # Rename columns for Prophet compatibility
+        # Ensure 'date' is in the datetime format
+        daily_sales['date'] = pd.to_datetime(daily_sales['date'])
+        
+        print(type(daily_sales))  # This should print <class 'pandas.core.frame.DataFrame'>
+        print(daily_sales.head())  # This should print the first few rows of daily_sales
+
+        print(type(merged_data))  # This should print <class 'pandas.core.frame.DataFrame'>
+        print(merged_data.head())  # This should print the first few rows of daily_sales
+        # Rename columns for compatibility with Prophet
         daily_sales.columns = ['ds', 'y']
-        return daily_sales
+        
+        return daily_sales, merged_data
+    
+    def split_time_series(self, data, test_size=0.2):
+        """
+        Split time series data into training and test sets.
+        """
+        split_idx = int(len(data) * (1 - test_size))
+        train = data[:split_idx]
+        test = data[split_idx:]
+        print(f"Splitting at index: {split_idx}")
+        print(f"Train data range: {train['ds'].min()} - {train['ds'].max()}")
+        print(f"Test data range: {test['ds'].min()} - {test['ds'].max()}")
+        return train, test, split_idx
