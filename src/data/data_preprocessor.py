@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -150,16 +151,24 @@ class DataPreparation:
         # Ensure 'date' is in the datetime format
         daily_sales['date'] = pd.to_datetime(daily_sales['date'])
         
-        print(type(daily_sales))  # This should print <class 'pandas.core.frame.DataFrame'>
-        print(daily_sales.head())  # This should print the first few rows of daily_sales
-
-        print(type(merged_data))  # This should print <class 'pandas.core.frame.DataFrame'>
-        print(merged_data.head())  # This should print the first few rows of daily_sales
+        # Count number of unique events per day
+        events_per_day = merged_data.groupby('date')['event_name'].nunique().reset_index()
+        events_per_day.columns = ['date', 'num_events']
+        
+        # Ensure 'date' is in the datetime format for events_per_day
+        events_per_day['date'] = pd.to_datetime(events_per_day['date'])
+        
+        # Merge with daily_sales to add 'num_events' column
+        daily_sales = pd.merge(daily_sales, events_per_day, on='date', how='left')
+        
+        # Fill NaN values in 'num_events' with 0 (days without events)
+        daily_sales['num_events'].fillna(0, inplace=True)
+        
         # Rename columns for compatibility with Prophet
-        daily_sales.columns = ['ds', 'y']
+        daily_sales.columns = ['ds', 'y', 'num_events']
         
         return daily_sales, merged_data
-    
+
     def split_time_series(self, data, test_size=0.2):
         """
         Split time series data into training and test sets.

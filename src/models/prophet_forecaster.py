@@ -8,12 +8,25 @@ class ProphetForecaster:
         pass
     
     def train_model(self, data):
+        # Initialize a Prophet object with daily and yearly seasonality
         model = Prophet(yearly_seasonality=True, daily_seasonality=True)
+        
+        # Add 'num_events' as an additional regressor to the model
+        model.add_regressor('num_events')
+        
+        # Fit the model to the data
         model.fit(data)
         return model
     
-    def forecast(self, model, days):
+    def forecast(self, model, days, future_regressors=None):
+        # Create a DataFrame with future dates
         future = model.make_future_dataframe(periods=days)
+        
+        # If future regressor values are provided, add them to the 'future' DataFrame
+        if future_regressors is not None:
+            future['num_events'] = future_regressors
+        
+        # Generate a forecast for the future dates
         forecast = model.predict(future)
         return forecast
     
