@@ -6,6 +6,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from feature_engineer import FeatureEngineer, MultiColumnLabelEncoder
+import joblib
 
 class DataPreparation:
     def __init__(self, sales_train, calendar, calendar_events, sell_prices):
@@ -13,7 +14,7 @@ class DataPreparation:
         self.calendar = calendar
         self.calendar_events = calendar_events
         self.sell_prices = sell_prices
-        self.numerical_features = ['sell_price', 'sales', 'day_of_week', 'month', 'year', 'event_type_encoded']
+        self.numerical_features = ['day_of_week', 'month', 'year', 'event_type_encoded']
         self.categorical_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
     
     def merge_data(self):
@@ -76,7 +77,7 @@ class DataPreparation:
         # Test ColumnTransformer
         preprocessor = ColumnTransformer(
             transformers=[
-                ('num', numerical_transformer, [col for col in self.numerical_features if col != 'revenue']),  # Exclude 'revenue' as it's the target
+                ('num', numerical_transformer, [col for col in self.numerical_features if col not in ['revenue', 'sales', 'sell_price']]),  # Exclude 'revenue', 'sales', and 'sell_price' as they are targets or should be excluded
                 ('cat', categorical_transformer, self.categorical_features)
             ])
         print("Column Transformer Output:")
@@ -90,6 +91,8 @@ class DataPreparation:
         
         # Step 2: Feature Engineering
         feature_engineer = FeatureEngineer()
+        feature_engineer.fit(merged_data)
+        feature_engineer.save_encoder('../../models/preprocessor and encoder/encoder.joblib')
         data_with_features = feature_engineer.fit_transform(merged_data)
         print(data_with_features.head())
         
@@ -101,8 +104,9 @@ class DataPreparation:
         print(f"Shape of X before fit_transform: {X.shape}")
 
         # Step 4: Data Transformation
-        preprocessor = self.data_transformation(X)
-        X_transformed = preprocessor.fit_transform(X)
+        self.preprocessor = self.data_transformation(X)
+        X_transformed = self.preprocessor.fit_transform(X)
+        joblib.dump(self.preprocessor, '../../models/preprocessor and encoder/preprocessor.joblib')
 
         print(f"Shape of X_transformed before DataFrame conversion: {X_transformed.shape}")
         
@@ -180,3 +184,91 @@ class DataPreparation:
         print(f"Train data range: {train['ds'].min()} - {train['ds'].max()}")
         print(f"Test data range: {test['ds'].min()} - {test['ds'].max()}")
         return train, test, split_idx
+    
+    def load_preprocessor(self, filepath):
+        self.preprocessor = joblib.load(filepath)
+        print(f"Preprocessor loaded from {filepath}")
+
+    def prepare_single_data_point(self, item_id, store_id, date):
+        """
+        Prepare a single data point for prediction.
+
+        Parameters:
+        item_id (str): ID of the item.
+        store_id (str): ID of the store.
+        date (str): Date string.
+
+        Returns:
+        pd.DataFrame: Prepared data point for prediction.
+        """
+        # Step 1: Create a DataFrame with the single data point
+        X_single = pd.DataFrame({'item_id': [item_id], 'store_id': [store_id], 'date': [date]})
+
+        # Extracting dept_id and cat_id from item_id
+        X_single['dept_id'] = X_single['item_id'].apply(lambda x: x.rsplit('_', 1)[0])  # This will take the substring before the last underscore
+        X_single['cat_id'] = X_single['dept_id'].apply(lambda x: x.split('_')[0])  # This will take the substring before the first underscore in dept_id
+
+        # Extracting state_id from store_id
+        X_single['state_id'] = X_single['store_id'].apply(lambda x: x.split('_')[0])  # This will take the substring before the first underscore
+
+        # Convert 'date' to datetime before merging
+        X_single['date'] = pd.to_datetime(X_single['date'])
+        # Ensure 'date' in self.calendar is also in datetime format
+        self.calendar['date'] = pd.to_datetime(self.calendar['date'])
+
+        # Step 2: Merge with calendar
+        print("Shape before calendar merge:", X_single.shape)
+        X_single = pd.merge(X_single, self.calendar, left_on='date', right_on='date', how='left')
+        print("Shape after calendar merge:", X_single.shape)
+        # Merge with sell_prices
+        print("Shape before sell_prices merge:", X_single.shape)
+        relevant_week = X_single['wm_yr_wk'].iloc[0]
+        relevant_sell_prices = self.sell_prices[
+            (self.sell_prices['store_id'] == store_id) &
+            (self.sell_prices['item_id'] == item_id) &
+            (self.sell_prices['wm_yr_wk'] == relevant_week)
+        ]
+        X_single = pd.merge(X_single, relevant_sell_prices, on=['store_id', 'item_id'], how='left')
+        print("Shape after sell_prices merge:", X_single.shape)
+#        X_single = pd.merge(X_single, self.sell_prices, on=['store_id', 'item_id'], how='left')
+#        print("Shape after sell_prices merge:", X_single.shape)
+        
+        # Fill missing values in 'sell_price' with 0
+        X_single['sell_price'].fillna(0, inplace=True)
+
+        # Merge with aggregated calendar_events if available
+        if self.calendar_events is not None:
+            agg_calendar_events = self.calendar_events.groupby('date').agg({
+                'event_name': lambda x: ', '.join(x),
+                'event_type': lambda x: ', '.join(x)
+            }).reset_index()
+            
+            # Ensure 'date' in agg_calendar_events is also in datetime format
+            agg_calendar_events['date'] = pd.to_datetime(agg_calendar_events['date'])
+
+            # Merge with aggregated calendar_events
+            print("Shape before calendar_events merge:", X_single.shape)
+            X_single = pd.merge(X_single, agg_calendar_events, on='date', how='left')
+            print("Shape after calendar_events merge:", X_single.shape)
+        
+        # Handle NaNs for event_name and event_type
+        X_single.fillna({'event_name': 'NoEvent', 'event_type': 'NoType'}, inplace=True)
+
+        # Step 3: Feature Engineering
+        feature_engineer = FeatureEngineer()
+        feature_engineer.load_encoder('../../models/preprocessor and encoder/encoder.joblib') # Loading the fitted encoder
+        X_single = feature_engineer.process_single_data_point(X_single)
+
+        # Step 4: Data Transformation
+        # Using the preprocessor fitted on the training data for transformation
+        # Ensure the columns order matches the training data
+        self.load_preprocessor('../../models/preprocessor and encoder/preprocessor.joblib')
+
+        columns_after_transformation = ['day_of_week', 'month', 'year', 'event_type_encoded', 'item_id',
+                                        'dept_id', 'cat_id', 'store_id','state_id']
+
+        X_transformed_single = self.preprocessor.transform(X_single)
+        
+        X_transformed_single = pd.DataFrame(X_transformed_single, columns=columns_after_transformation)
+
+        return X_transformed_single
