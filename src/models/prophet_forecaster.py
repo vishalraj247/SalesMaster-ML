@@ -2,6 +2,7 @@ from prophet import Prophet
 from prophet.plot import add_changepoints_to_plot
 import matplotlib.pyplot as plt
 import numpy as np
+import joblib
 
 class ProphetForecaster:
     def __init__(self):
@@ -48,3 +49,10 @@ class ProphetForecaster:
         fig = model.plot(forecast)
         a = add_changepoints_to_plot(fig.gca(), model, forecast)
         plt.show()
+
+    def save_model(self, model, filepath):
+        """
+        Save the trained Prophet model to the specified file path.
+        """
+        with open(filepath, 'wb') as model_file:
+            joblib.dump(model, model_file)
