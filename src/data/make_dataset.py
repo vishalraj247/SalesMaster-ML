@@ -2,11 +2,11 @@ import pandas as pd
 
 def load_data():
     # Load datasets
-    sales_train = pd.read_csv('../../data/raw/sales_train.csv')
-    sales_test = pd.read_csv('../../data/raw/sales_test.csv')
-    calendar = pd.read_csv('../../data/raw/calendar.csv')
-    sell_prices = pd.read_csv('../../data/raw/items_weekly_sell_prices.csv')
-    calendar_events = pd.read_csv('../../data/raw/calendar_events.csv')
+    sales_train = pd.read_csv('data/raw/sales_train.csv')
+    sales_test = pd.read_csv('data/raw/sales_test.csv')
+    calendar = pd.read_csv('data/raw/calendar.csv')
+    sell_prices = pd.read_csv('data/raw/items_weekly_sell_prices.csv')
+    calendar_events = pd.read_csv('data/raw/calendar_events.csv')
 
     return sales_train, sales_test, calendar, sell_prices, calendar_events
 

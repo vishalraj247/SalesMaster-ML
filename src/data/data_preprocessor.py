@@ -5,7 +5,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from feature_engineer import FeatureEngineer, MultiColumnLabelEncoder
+from src.features.feature_engineer import FeatureEngineer, MultiColumnLabelEncoder
 import joblib
 
 class DataPreparation:
@@ -92,7 +92,7 @@ class DataPreparation:
         # Step 2: Feature Engineering
         feature_engineer = FeatureEngineer()
         feature_engineer.fit(merged_data)
-        feature_engineer.save_encoder('../../models/preprocessor and encoder/encoder.joblib')
+        feature_engineer.save_encoder('models/preprocessor and encoder/encoder.joblib')
         data_with_features = feature_engineer.fit_transform(merged_data)
         print(data_with_features.head())
         
@@ -106,7 +106,7 @@ class DataPreparation:
         # Step 4: Data Transformation
         self.preprocessor = self.data_transformation(X)
         X_transformed = self.preprocessor.fit_transform(X)
-        joblib.dump(self.preprocessor, '../../models/preprocessor and encoder/preprocessor.joblib')
+        joblib.dump(self.preprocessor, 'models/preprocessor and encoder/preprocessor.joblib')
 
         print(f"Shape of X_transformed before DataFrame conversion: {X_transformed.shape}")
         
@@ -254,13 +254,13 @@ class DataPreparation:
 
         # Step 3: Feature Engineering
         feature_engineer = FeatureEngineer()
-        feature_engineer.load_encoder('../../models/preprocessor and encoder/encoder.joblib') # Loading the fitted encoder
+        feature_engineer.load_encoder('models/preprocessor and encoder/encoder.joblib') # Loading the fitted encoder
         X_single = feature_engineer.process_single_data_point(X_single)
 
         # Step 4: Data Transformation
         # Using the preprocessor fitted on the training data for transformation
         # Ensure the columns order matches the training data
-        self.load_preprocessor('../../models/preprocessor and encoder/preprocessor.joblib')
+        self.load_preprocessor('models/preprocessor and encoder/preprocessor.joblib')
 
         columns_after_transformation = ['day_of_week', 'month', 'year', 'event_type_encoded', 'item_id',
                                         'dept_id', 'cat_id', 'store_id','state_id']

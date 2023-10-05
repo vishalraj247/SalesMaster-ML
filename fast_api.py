@@ -2,62 +2,105 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import joblib
 import pandas as pd
-from data_preprocessor import DataPreparation
-from feature_engineer import FeatureEngineer
-from prophet_forecaster import ProphetForecaster
+from datetime import datetime
+from src.data.make_dataset import load_data
+from src.data.data_preprocessor import DataPreparation
+from src.features.feature_engineer import FeatureEngineer
+from src.models.prophet_forecaster import ProphetForecaster
 
-forecaster = ProphetForecaster()
 # Load Models
-xgboost_model = joblib.load("../../models/predictive/final_xgboost_model.joblib")
-prophet_model = forecaster.load_model("../../models/forecasting/final_prophet_model")
+xgboost_model = joblib.load("models/predictive/final_xgboost_model.joblib")
+prophet_model = joblib.load("models/forecasting/final_prophet_model.joblib")
 
 # Initialize FastAPI app
 app = FastAPI()
 
-# Create Pydantic models for request and response
-class XGBoostRequest(BaseModel):
-    item_id: str
-    store_id: str
-    date: str
-
-class ProphetRequest(BaseModel):
-    date: str
-    num_events: float
-
-class PredictionResponse(BaseModel):
-    prediction: float
+# Load data
+sales_train, sales_test, calendar, sell_prices, calendar_events = load_data()
 
 # Load the data preparation and feature engineering instances or functions
 data_prep = DataPreparation(sales_train, calendar, calendar_events, sell_prices)
 feature_engineer = FeatureEngineer()
+forecaster = ProphetForecaster()
 
-# XGBoost Endpoint
-@app.post("/predict_xgboost", response_model=PredictionResponse)
-async def predict_xgboost(request: XGBoostRequest):
+@app.get("/")
+async def read_root():
+    return {
+    "description": "SalesMaster-ML API: An advanced sales forecasting system.",
+    "project_objectives": "To accurately forecast sales volume at national level and for specific store-item combinations, aiding in efficient inventory management and strategic planning.",
+    "endpoints": {
+        "/": {
+            "description": "Provides a brief overview of the SalesMaster-ML API including its objectives, list of endpoints, expected input parameters, and output formats.",
+            "method": "GET"
+        },
+        "/health/": {
+            "description": "Endpoint to verify that the API is running and healthy. Returns a status code of 200 along with a custom welcome message.",
+            "method": "GET"
+        },
+        "/sales/national/": {
+            "description": "Endpoint for national sales forecast. Returns the predicted sales volume for the next 7 days based on the input date and number of events.",
+            "method": "GET",
+            "parameters": {
+                "date": "The start date for the forecast period in 'YYYY-MM-DD' format.",
+                "num_events": "Estimated number of events occurring in the forecast period (float)."
+            }
+        },
+        "/sales/stores/items/": {
+            "description": "Endpoint for item-specific sales forecast in a given store. Returns the predicted sales volume for the specified item, store, and date.",
+            "method": "GET",
+            "parameters": {
+                "item_id": "The unique identifier for the item.",
+                "store_id": "The unique identifier for the store.",
+                "date": "The date for which the sales forecast is requested in 'YYYY-MM-DD' format."
+            }
+        }
+    },
+    "github_repository": "https://github.com/vishalraj247/SalesMaster-ML.git"
+}
+
+@app.get("/health/")
+async def read_health():
+    return {"status": 200, "message": "Welcome to SalesMaster-ML API! The API is healthy and ready to forecast sales!"}
+
+@app.get("/sales/national/")
+async def get_national_sales(date: str, num_events: float):
+    try:
+        # Convert string date to datetime object
+        start_date = datetime.strptime(date, '%Y-%m-%d')
+
+        # Increment start_date by one day
+        start_date += pd.Timedelta(days=1)
+
+        # Create a dataframe with date range for the next 7 days
+        future_dates = pd.date_range(start=start_date, periods=7).to_frame(index=False, name='ds')
+
+        # Assign the estimated number of events to future dates
+        future_dates['num_events'] = num_events
+
+        # Make prediction using loaded Prophet model
+        forecast = prophet_model.predict(future_dates)
+
+        # Extract predictions for the next 7 days
+        predictions = forecast[['ds', 'yhat']].set_index('ds').to_dict()['yhat']
+
+        # Convert date keys from Timestamp to string in the response
+        str_predictions = {str(key): value for key, value in predictions.items()}
+
+        # Return the predictions
+        return {"predictions": str_predictions}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/sales/stores/items/")
+async def get_item_sales(item_id: str, store_id: str, date: str):
     try:
         # Prepare single data point using the provided request data
-        prepared_data = data_prep.prepare_single_data_point(request.item_id, request.store_id, request.date)
-        
+        prepared_data = data_prep.prepare_single_data_point(item_id, store_id, date)
+
         # Make prediction using XGBoost model
         prediction = xgboost_model.predict(prepared_data)
 
         # Return the prediction
-        return PredictionResponse(prediction=float(prediction))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-# Prophet Endpoint
-@app.post("/predict_prophet", response_model=PredictionResponse)
-async def predict_prophet(request: ProphetRequest):
-    try:
-        # Prepare future dataframe for Prophet
-        future = pd.DataFrame({"ds": [request.date], "num_events": [request.num_events]})
-        
-        # Make prediction using Prophet model
-        forecast = prophet_model.predict(future)
-        prediction = forecast['yhat'].iloc[0]
-
-        # Return the prediction
-        return PredictionResponse(prediction=float(prediction))
+        return {"prediction": float(prediction)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

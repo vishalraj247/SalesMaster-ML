@@ -54,19 +54,5 @@ class ProphetForecaster:
         """
         Save the trained Prophet model to the specified file path.
         """
-        try:
-            model.save(filepath)
-            print(f"Model saved at {filepath}")
-        except Exception as e:
-            print(f"Error saving model: {e}")
-
-    def load_model(self, filepath):
-        """
-        Load a trained Prophet model from the specified file path.
-        """
-        try:
-            model = Prophet().load(filepath)
-            print(f"Model loaded from {filepath}")
-            return model
-        except Exception as e:
-            print(f"Error loading model: {e}")
+        with open(filepath, 'wb') as model_file:
+            joblib.dump(model, model_file)
