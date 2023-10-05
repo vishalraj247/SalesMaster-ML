@@ -57,7 +57,7 @@ async def read_root():
                         "format": "YYYY-MM-DD"
                     },
                     "num_events": {
-                        "description": "Estimated number of events in the forecast period.",
+                        "description": "Estimated number of events in the forecast period.(usually 0)",
                         "type": "float"
                     }
                 }
