@@ -19,3 +19,10 @@ def display_head(sales_train, sales_test, calendar, sell_prices, calendar_events
     calendar_events_head = calendar_events.head()
     
     return train_head, test_head, calendar_head, sell_prices_head, calendar_events_head
+
+def load_data_prediction():
+    # Load datasets
+    calendar = pd.read_csv('data/raw/calendar.csv')
+    calendar_events = pd.read_csv('data/raw/calendar_events.csv')
+
+    return calendar, calendar_events

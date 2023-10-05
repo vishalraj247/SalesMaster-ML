@@ -65,11 +65,9 @@ class FeatureEngineer(BaseEstimator, TransformerMixin):
         # Handle X_single data point or small batch in the same way we handled X in the transform method
 
         # Example: Adjust for single data point
-        if 'sales' in X_single.columns:
-            X_single['revenue'] = X_single['sell_price'] * X_single['sales']
-        else:
-            # Handle cases where 'sales' data is not available. You might need to input a default value or handle it appropriately.
-            X_single['revenue'] = 0
+        if 'sell_price' not in X_single.columns:
+            X_single['sell_price'] = 0  # or some default value
+            
         X_single['date'] = pd.to_datetime(X_single['date'])
         X_single['day_of_week'] = X_single['date'].dt.dayofweek
         X_single['month'] = X_single['date'].dt.month

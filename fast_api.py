@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import joblib
 import pandas as pd
 from datetime import datetime
-from src.data.make_dataset import load_data
+from src.data.make_dataset import load_data_prediction
 from src.data.data_preprocessor import DataPreparation
 from src.features.feature_engineer import FeatureEngineer
 from src.models.prophet_forecaster import ProphetForecaster
@@ -16,10 +16,11 @@ prophet_model = joblib.load("models/forecasting/final_prophet_model.joblib")
 app = FastAPI()
 
 # Load data
-sales_train, sales_test, calendar, sell_prices, calendar_events = load_data()
+calendar, calendar_events = load_data_prediction()
 
 # Load the data preparation and feature engineering instances or functions
-data_prep = DataPreparation(sales_train, calendar, calendar_events, sell_prices)
+# Initialize DataPreparation with the necessary datasets only
+data_prep = DataPreparation(calendar=calendar, calendar_events=calendar_events)
 feature_engineer = FeatureEngineer()
 forecaster = ProphetForecaster()
 

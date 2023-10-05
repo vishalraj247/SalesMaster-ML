@@ -9,7 +9,7 @@ from src.features.feature_engineer import FeatureEngineer, MultiColumnLabelEncod
 import joblib
 
 class DataPreparation:
-    def __init__(self, sales_train, calendar, calendar_events, sell_prices):
+    def __init__(self, sales_train=None, calendar=None, calendar_events=None, sell_prices=None):
         self.sales_train = sales_train
         self.calendar = calendar
         self.calendar_events = calendar_events
@@ -21,6 +21,8 @@ class DataPreparation:
         """
         Merge sales_train with calendar, sell_prices, and calendar_events
         """
+        if self.sales_train is None:
+            raise ValueError("sales_train is None. It must be provided for merge_data operation.")
         # Extract day columns
         day_columns = [col for col in self.sales_train.columns if 'd_' in col]
 
@@ -86,13 +88,15 @@ class DataPreparation:
         return preprocessor
 
     def prepare_data(self):
+        if self.sales_train is None or self.sell_prices is None:
+            raise ValueError("sales_train and sell_prices must be provided for prepare_data operation.")
         # Step 1: Merge data
         merged_data = self.merge_data()
         
         # Step 2: Feature Engineering
         feature_engineer = FeatureEngineer()
         feature_engineer.fit(merged_data)
-        feature_engineer.save_encoder('models/preprocessor and encoder/encoder.joblib')
+        feature_engineer.save_encoder('models/preprocessor_and_encoder/encoder.joblib')
         data_with_features = feature_engineer.fit_transform(merged_data)
         print(data_with_features.head())
         
@@ -106,7 +110,7 @@ class DataPreparation:
         # Step 4: Data Transformation
         self.preprocessor = self.data_transformation(X)
         X_transformed = self.preprocessor.fit_transform(X)
-        joblib.dump(self.preprocessor, 'models/preprocessor and encoder/preprocessor.joblib')
+        joblib.dump(self.preprocessor, 'models/preprocessor_and_encoder/preprocessor.joblib')
 
         print(f"Shape of X_transformed before DataFrame conversion: {X_transformed.shape}")
         
@@ -143,6 +147,8 @@ class DataPreparation:
         Returns:
             pd.DataFrame: A DataFrame with 'ds' and 'y' columns ready for Prophet forecasting.
         """
+        if self.sales_train is None or self.sell_prices is None:
+            raise ValueError("sales_train and sell_prices must be provided for prepare_prophet_data operation.")
         # Call the merge_data method to get the merged dataset
         merged_data = self.merge_data()
 
@@ -220,19 +226,6 @@ class DataPreparation:
         print("Shape before calendar merge:", X_single.shape)
         X_single = pd.merge(X_single, self.calendar, left_on='date', right_on='date', how='left')
         print("Shape after calendar merge:", X_single.shape)
-        # Merge with sell_prices
-        print("Shape before sell_prices merge:", X_single.shape)
-        relevant_week = X_single['wm_yr_wk'].iloc[0]
-        relevant_sell_prices = self.sell_prices[
-            (self.sell_prices['store_id'] == store_id) &
-            (self.sell_prices['item_id'] == item_id) &
-            (self.sell_prices['wm_yr_wk'] == relevant_week)
-        ]
-        X_single = pd.merge(X_single, relevant_sell_prices, on=['store_id', 'item_id'], how='left')
-        print("Shape after sell_prices merge:", X_single.shape)
-        
-        # Fill missing values in 'sell_price' with 0
-        X_single['sell_price'].fillna(0, inplace=True)
 
         # Merge with aggregated calendar_events if available
         if self.calendar_events is not None:
@@ -254,13 +247,13 @@ class DataPreparation:
 
         # Step 3: Feature Engineering
         feature_engineer = FeatureEngineer()
-        feature_engineer.load_encoder('models/preprocessor and encoder/encoder.joblib') # Loading the fitted encoder
+        feature_engineer.load_encoder('models/preprocessor_and_encoder/encoder.joblib') # Loading the fitted encoder
         X_single = feature_engineer.process_single_data_point(X_single)
 
         # Step 4: Data Transformation
         # Using the preprocessor fitted on the training data for transformation
         # Ensure the columns order matches the training data
-        self.load_preprocessor('models/preprocessor and encoder/preprocessor.joblib')
+        self.load_preprocessor('models/preprocessor_and_encoder/preprocessor.joblib')
 
         columns_after_transformation = ['day_of_week', 'month', 'year', 'event_type_encoded', 'item_id',
                                         'dept_id', 'cat_id', 'store_id','state_id']
