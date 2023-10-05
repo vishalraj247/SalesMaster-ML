@@ -27,81 +27,138 @@ forecaster = ProphetForecaster()
 @app.get("/")
 async def read_root():
     return {
-    "description": "SalesMaster-ML API: An advanced sales forecasting system.",
-    "project_objectives": "To accurately forecast sales volume at national level and for specific store-item combinations, aiding in efficient inventory management and strategic planning.",
-    "endpoints": {
-        "/": {
-            "description": "Provides a brief overview of the SalesMaster-ML API including its objectives, list of endpoints, expected input parameters, and output formats.",
-            "method": "GET"
+        "API": {
+            "name": "SalesMaster-ML API",
+            "version": "1.0",
+            "description": "An advanced sales forecasting system that accurately forecasts sales volume at the national level and for specific store-item combinations.",
+            "repository": "https://github.com/vishalraj247/SalesMaster-ML.git"
         },
-        "/health/": {
-            "description": "Endpoint to verify that the API is running and healthy. Returns a status code of 200 along with a custom welcome message.",
-            "method": "GET"
-        },
-        "/sales/national/": {
-            "description": "Endpoint for national sales forecast. Returns the predicted sales volume for the next 7 days based on the input date and number of events.",
-            "method": "GET",
-            "parameters": {
-                "date": "The start date for the forecast period in 'YYYY-MM-DD' format.",
-                "num_events": "Estimated number of events occurring in the forecast period (float)."
-            }
-        },
-        "/sales/stores/items/": {
-            "description": "Endpoint for item-specific sales forecast in a given store. Returns the predicted sales volume for the specified item, store, and date.",
-            "method": "GET",
-            "parameters": {
-                "item_id": "The unique identifier for the item.",
-                "store_id": "The unique identifier for the store.",
-                "date": "The date for which the sales forecast is requested in 'YYYY-MM-DD' format."
+        "endpoints": {
+            "root": {
+                "path": "/",
+                "method": "GET",
+                "description": "Provides an overview of the SalesMaster-ML API.",
+                "parameters": None
+            },
+            "health": {
+                "path": "/health/",
+                "method": "GET",
+                "description": "Verifies that the API is running and healthy.",
+                "parameters": None
+            },
+            "national_sales": {
+                "path": "/sales/national/?date=YYYY-MM-DD&num_events=0",
+                "method": "GET",
+                "description": "Forecasts national sales for the next 7 days based on the input date and number of events which is 0 usually.",
+                "parameters": {
+                    "date": {
+                        "description": "Start date for the forecast period.",
+                        "type": "string",
+                        "format": "YYYY-MM-DD"
+                    },
+                    "num_events": {
+                        "description": "Estimated number of events in the forecast period.",
+                        "type": "float"
+                    }
+                }
+            },
+            "item_sales": {
+                "path": "/sales/stores/items/?item_id=ITEM123&store_id=STORE456&date=YYYY-MM-DD",
+                "method": "GET",
+                "description": "Forecasts sales for a specific item in a given store on a specified date.",
+                "parameters": {
+                    "item_id": {
+                        "description": "Unique identifier for the item.",
+                        "type": "string"
+                    },
+                    "store_id": {
+                        "description": "Unique identifier for the store.",
+                        "type": "string"
+                    },
+                    "date": {
+                        "description": "Date for the sales forecast.",
+                        "type": "string",
+                        "format": "YYYY-MM-DD"
+                    }
+                }
             }
         }
-    },
-    "github_repository": "https://github.com/vishalraj247/SalesMaster-ML.git"
-}
+    }
 
 @app.get("/health/")
 async def read_health():
-    return {"status": 200, "message": "Welcome to SalesMaster-ML API! The API is healthy and ready to forecast sales!"}
+    return {
+        "status": {
+            "code": 200,
+            "type": "Success",
+            "message": "OK"
+        },
+        "data": {
+            "welcomeMessage": "Welcome to SalesMaster-ML API!",
+            "healthStatus": "Healthy",
+            "capabilities": "Ready to forecast sales!"
+        }
+    }
 
 @app.get("/sales/national/")
 async def get_national_sales(date: str, num_events: float):
     try:
-        # Convert string date to datetime object
         start_date = datetime.strptime(date, '%Y-%m-%d')
-
-        # Increment start_date by one day
         start_date += pd.Timedelta(days=1)
-
-        # Create a dataframe with date range for the next 7 days
         future_dates = pd.date_range(start=start_date, periods=7).to_frame(index=False, name='ds')
-
-        # Assign the estimated number of events to future dates
         future_dates['num_events'] = num_events
 
-        # Make prediction using loaded Prophet model
         forecast = prophet_model.predict(future_dates)
-
-        # Extract predictions for the next 7 days
         predictions = forecast[['ds', 'yhat']].set_index('ds').to_dict()['yhat']
-
-        # Convert date keys from Timestamp to string in the response
         str_predictions = {str(key): value for key, value in predictions.items()}
 
-        # Return the predictions
-        return {"predictions": str_predictions}
+        return {
+            "status": {
+                "code": 200,
+                "type": "Success",
+                "message": "OK"
+            },
+            "data": {
+                "forecastStartDate": date,
+                "forecastEndDate": str(start_date + pd.Timedelta(days=6)),
+                "predictions": str_predictions
+            }
+        }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {
+            "status": {
+                "code": 400,
+                "type": "Error",
+                "message": str(e)
+            },
+            "data": None
+        }
 
 @app.get("/sales/stores/items/")
 async def get_item_sales(item_id: str, store_id: str, date: str):
     try:
-        # Prepare single data point using the provided request data
         prepared_data = data_prep.prepare_single_data_point(item_id, store_id, date)
-
-        # Make prediction using XGBoost model
         prediction = xgboost_model.predict(prepared_data)
 
-        # Return the prediction
-        return {"prediction": float(prediction)}
+        return {
+            "status": {
+                "code": 200,
+                "type": "Success",
+                "message": "OK"
+            },
+            "data": {
+                "itemId": item_id,
+                "storeId": store_id,
+                "forecastDate": date,
+                "predictedSales": float(prediction)
+            }
+        }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {
+            "status": {
+                "code": 400,
+                "type": "Error",
+                "message": str(e)
+            },
+            "data": None
+        }
