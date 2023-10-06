@@ -8,7 +8,7 @@ Below is the project's structure:
 
 Project Organization
 ------------
-
+```
 SalesMaster-ML/
 │
 ├── Dockerfile
@@ -52,7 +52,7 @@ SalesMaster-ML/
 ├── setup.py
 ├── test_environment.py
 └── tox.ini
-
+```
 
 ## Getting Started
 1. Clone this repository
