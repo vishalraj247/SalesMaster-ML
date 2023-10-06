@@ -1,57 +1,82 @@
-SalesMaster-ML
-==============================
+# SalesMaster-ML
 
-Machine Learning models for sales prediction and forecasting in retail.
+## Overview
+SalesMaster-ML is a robust system designed for sales prediction and forecasting in the retail sector, employing advanced machine learning models.
+
+## Structure
+Below is the project's structure:
 
 Project Organization
 ------------
 
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
-    │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
-    │
-    └── tox.ini            <- tox file with settings for running tox; see tox.readthedocs.io
+SalesMaster-ML/
+│
+├── Dockerfile
+├── .dockerignore
+├── docs/
+├── models/
+│   ├── forecasting/
+│   │   └── final_prophet_model.joblib
+│   ├── predictive/
+│   │   └── final_xgboost_model.joblib
+│   └── preprocessor and encoder/
+│       ├── encoder.joblib
+│       └── preprocessor.joblib
+├── notebooks/
+│   ├── forecasting/
+│   │   └── raj_vishal-14227627-forecasting_prophet.ipynb
+│   └── predictive/
+│       └── raj_vishal-14227627-predictive_xgboost.ipynb
+├── references/
+├── reports/
+│   ├── figures/
+│   │   ├── Actual vs Forecasted Values.png
+│   │   └── Actual vs Forecasted Values(data points).png
+│   ├── Vishal_Raj-14227627-Experiment_Report.pdf
+│   └── VishalRaj_14227627_AT2FinalReport.pdf
+├── src/
+    ├── data/
+    │   ├── data_preprocessor.py
+    │   └── make_dataset.py
+    ├── features/
+    │   └── feature_engineer.py
+    ├── models/
+    │   ├── prophet_forecaster.py
+    │   └── xgboost_predict.py
+├── fast_api.py
+├── LICENSE
+├── Makefile
+├── Procfile
+├── requirements.txt
+├── runtime.txt
+├── setup.py
+├── test_environment.py
+└── tox.ini
 
 
---------
+## Getting Started
+1. Clone this repository
+2. Navigate to the project directory
+3. Install dependencies: `pip install -r requirements.txt`
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+## Deploying to Heroku
+### Prerequisites
+- Heroku account
+- Heroku CLI installed
+
+### Steps
+1. Login to Heroku: `heroku login`
+2. Create a new Heroku app: `heroku create your-app-name`
+3. Set Heroku remote: `git remote add heroku your-heroku-git-url`
+4. Push to Heroku: `git push heroku master`
+5. Open your app with: `heroku open`
+
+## Usage
+Refer to the API documentation: [API Docs](https://sales-master-app-031d89e0c0e1.herokuapp.com/docs#/default/read_root__get)
+
+## License
+This project is licensed under the terms of the MIT license.
+
+## Acknowledgments
+- Prophet and XGBoost for providing robust algorithms for forecasting and prediction respectively.
+- FastAPI for providing an efficient way to deploy ML models.
