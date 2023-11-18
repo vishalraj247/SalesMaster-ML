@@ -1,7 +1,7 @@
 # SalesMaster-ML
 
 ## Overview
-SalesMaster-ML is a robust system designed for sales prediction and forecasting in the retail sector, employing advanced machine learning models.
+SalesMaster-ML is a robust system designed for sales prediction and forecasting in the retail sector, using XGBoost and Prophet machine learning models for sales revenue forecasting. It is deployed using FastAPI on Heroku, providing businesses with user-friendly access to forecasting tools for inventory management and financial planning.
 
 ## Structure
 Below is the project's structure:
